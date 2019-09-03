@@ -2,8 +2,12 @@ import requests
 import os
 import json
 
+cache_dir = "cache"
+if not os.path.exists(cache_dir):
+    os.makedirs(cache_dir)
+
 def get_cache_filename(name):
-	return f"cache/{name}.json"
+	return f"{cache_dir}/{name}.json"
 
 def get_cache(name):
 	path = get_cache_filename(name)
@@ -23,6 +27,8 @@ def do_web_request(url, cache_name):
 	if data:
 		return data
 	response = requests.get(url)
+	if response.status_code != 200:
+		raise Exception(f"shit broke: {response.status_code}")
 	data = response.json()
 	save_cache(cache_name, data)
 	return data
@@ -36,7 +42,6 @@ def ranktostars(rank):
 
 def avg(items):
 	n = 0
-	items = 
 	for item in items:
 		n += item
 	return n / len(items)
@@ -54,6 +59,8 @@ def rankdiff(team1, team2):
 		return None
 	return avg(team1) - avg(team2)
 
+
+
 def main(steamid, days):
 	match_stubs = do_web_request(f"http://api.opendota.com/api/players/{steamid}/matches?date={days}", f"matches_{days}")
 
@@ -64,12 +71,32 @@ def main(steamid, days):
 		match_id = stub["match_id"]
 		matches.append(do_web_request(f"http://api.opendota.com/api/matches/{match_id}", f"match_{match_id}"))
 
+	alldiffs = []
+
 	for match in matches:
 		# find myself and what team im on
 		# team differentiated by dire >= 128, radiant < 128 in player_slot
-				
+		players = match["players"]
+		radiant = list(filter(lambda p: p["player_slot"] < 128, players))
+		dire = list(filter(lambda p: p["player_slot"] >= 128, players))
+
+		is_radiant = any(p["account_id"] == steamid for p in radiant)
+
+		if is_radiant:
+			team1 = radiant
+			team2 = dire
+		else:
+			team1 = dire
+			team2 = radiant
+
+		diff = rankdiff(team1, team2)
+		if diff is not None:
+			print(f"{diff:.2f}")
+			alldiffs.append(diff)
+
+
+	print(f"average: {avg(alldiffs):.2f}")
 
 
 
-
-main(95211699, 30)
+main(95211699, 60)
