@@ -120,6 +120,8 @@ def main(steamid, days, queryargs=None):
 
 	matches.reverse()
 
+	csv_data = ""
+
 	for match in matches:
 		players = match["players"]
 		radiant = list(filter(lambda p: p["player_slot"] < 128, players))
@@ -137,9 +139,14 @@ def main(steamid, days, queryargs=None):
 		diff = rankdiff(team1, team2)
 		if diff is not None:
 			print(f"match {match['match_id']: <10} diff: {' ' if diff > 0 else ''}{diff:.2f}")
+			csv_data += f"{match['match_id']},{diff:.2f}\n"
 			alldiffs.append(diff)
 		else:
 			print(f"match {match['match_id']: <10} skipped")
+
+
+	with open("out.csv", "w+") as f:
+		f.write(csv_data)
 
 
 	print(f"average: {avg(alldiffs):.2f}")
@@ -161,3 +168,6 @@ def main(steamid, days, queryargs=None):
 main(95211699, 60, "included_account_id=170801607&lobby_type=7")
 
 # singlematch(95211699, 4997722586)
+
+
+# singlematch(95211699, 5004860090)
