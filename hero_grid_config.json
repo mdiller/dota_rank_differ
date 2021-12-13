@@ -1,0 +1,77 @@
+{
+	"version": 3,
+	"configs": [
+		{
+			"config_name": "Most Played",
+			"categories": [
+				{
+					"category_name": "Safe Lane",
+					"x_position": 0,
+					"y_position": 0.0,
+					"width": 1000,
+					"height": 137.5,
+					"hero_ids": [
+						48,
+						63,
+						119,
+						81,
+						42
+					]
+				},
+				{
+					"category_name": "Mid Lane",
+					"x_position": 0,
+					"y_position": 137.5,
+					"width": 1000,
+					"height": 137.5,
+					"hero_ids": []
+				},
+				{
+					"category_name": "Offlane",
+					"x_position": 0,
+					"y_position": 275.0,
+					"width": 1000,
+					"height": 137.5,
+					"hero_ids": [
+						28,
+						25,
+						119,
+						63,
+						21
+					]
+				},
+				{
+					"category_name": "Support",
+					"x_position": 0,
+					"y_position": 412.5,
+					"width": 1000,
+					"height": 137.5,
+					"hero_ids": [
+						119,
+						84,
+						30,
+						5,
+						90,
+						26,
+						25,
+						28,
+						21,
+						52,
+						86,
+						20,
+						13,
+						6,
+						71,
+						45,
+						29,
+						100,
+						81,
+						83,
+						111,
+						9
+					]
+				}
+			]
+		}
+	]
+}
