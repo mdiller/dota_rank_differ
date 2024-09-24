@@ -2,6 +2,7 @@ import requests
 import os
 import json
 import time
+from datetime import datetime
 # from heroes import get_hero_infos
 from collections import Counter
 
@@ -26,20 +27,26 @@ def save_cache(name, data):
 
 def do_web_request(url, cache_name):
 	# print(cache_name)
-	data = get_cache(cache_name)
-	if data:
-		return data
+	if cache_name:
+		data = get_cache(cache_name)
+		if data:
+			return data
+	print(f"querying: {url} ...")
 	response = requests.get(url)
 	if response.status_code == 429:
 		seconds_to_wait = 10
 		print(f"being rate limited, waiting {seconds_to_wait} seconds...")
 		time.sleep(seconds_to_wait)
 		return do_web_request(url, cache_name)
+	elif response.status_code == 500:
+		print("got error 500 on this one, skipping")
+		return None
 	elif response.status_code != 200:
 		print(response.headers)
 		raise Exception(f"shit broke: {response.status_code}")
 	data = response.json()
-	save_cache(cache_name, data)
+	if cache_name:
+		save_cache(cache_name, data)
 	return data
 
 def create_hero_grid_config(categories):
@@ -126,20 +133,37 @@ def singlematch_addhero(steamid, match_id, categories):
 			print(match_id)
 		categories[lanes[lane_role]].append(hero_id)
 
+def wegotfirstblood(match, steamid):
+	players = match["players"]
+	player = None
+	fb_player = None
+	for p in players:
+		if p["account_id"] == steamid:
+			player = p
+		if p["firstblood_claimed"]:
+			fb_player = p
+
+	if fb_player is None:
+		return None
+
+	return (player["player_slot"] < 128 and fb_player["player_slot"] < 128) or (player["player_slot"] >= 128 and fb_player["player_slot"] >= 128)
+
 def main(steamid, days, queryargs=None):
 	url = f"http://api.opendota.com/api/players/{steamid}/matches?date={days}"
-	matches_cache = f"matches_{days}"
 	if queryargs:
-		matches_cache += f"_{hash(queryargs)}"
 		url += f"&{queryargs}"
-	match_stubs = do_web_request(url, matches_cache)
+	match_stubs = do_web_request(url, None)
 
 	# player = do_web_request(f"http://api.opendota.com/api/players/{steamid}", f"player_{steamid}")
 	
 	matches = []
 	for stub in match_stubs:
 		match_id = stub["match_id"]
+		if match_id == 6317970189:
+			print("hello")
 		matches.append(do_web_request(f"http://api.opendota.com/api/matches/{match_id}", f"match_{match_id}"))
+
+	matches = list(filter(lambda m: m is not None, matches))
 
 	alldiffs = []
 
@@ -152,21 +176,33 @@ def main(steamid, days, queryargs=None):
 		"support": []
 	}
 
-	for match in matches:
-		singlematch_addhero(steamid, match["match_id"], categories)
+	num_firstblooded = 0
+	num_total = len(matches)
 
+	print(num_total)
+
+	for match in matches:
+		did_firstblood = wegotfirstblood(match, steamid)
+		if did_firstblood:
+			num_firstblooded += 1
+		if did_firstblood is None:
+			num_total -= 1
+
+	percent = 100.0 * (num_firstblooded / num_total)
+
+	print(f"Firstblooded matches: {percent:.2f}%")
 	# hero_infos = get_hero_infos()
 
-	for category in categories:
-		print(f"{category}:")
-		hero_counts = sorted(Counter(categories[category]).items(), key=lambda x: x[1], reverse=True)
-		for hero_count in hero_counts:
-			print(" - " + str(hero_count[0]) + f" ({hero_count[1]})")
+	# for category in categories:
+	# 	print(f"{category}:")
+	# 	hero_counts = sorted(Counter(categories[category]).items(), key=lambda x: x[1], reverse=True)
+	# 	for hero_count in hero_counts:
+	# 		print(" - " + str(hero_count[0]) + f" ({hero_count[1]})")
 
-	grid_config = create_hero_grid_config(categories)
-	with open("hero_grid_config.json", "w+") as f:
-		f.write(json.dumps(grid_config, indent="\t"))
+	# grid_config = create_hero_grid_config(categories)
+	# with open("hero_grid_config.json", "w+") as f:
+	# 	f.write(json.dumps(grid_config, indent="\t"))
 
 
 # all
-main(185742631, 120)
+main(95211699, 120)
