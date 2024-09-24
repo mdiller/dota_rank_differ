@@ -21,16 +21,18 @@ def save_cache(name, data):
 	with open(path, "w+") as f:
 		f.write(json.dumps(data, indent="\t"))
 
-def do_web_request(url, cache_name):
+def do_web_request(url, cache_name=None):
 	# print(cache_name)
-	data = get_cache(cache_name)
-	if data:
-		return data
+	if cache_name:
+		data = get_cache(cache_name)
+		if data:
+			return data
 	response = requests.get(url)
 	if response.status_code != 200:
 		raise Exception(f"shit broke: {response.status_code}")
 	data = response.json()
-	save_cache(cache_name, data)
+	if cache_name:
+		save_cache(cache_name, data)
 	return data
 
 def ranktostars(rank):
@@ -107,7 +109,8 @@ def main(steamid, days, queryargs=None):
 	if queryargs:
 		matches_cache += f"_{hash(queryargs)}"
 		url += f"&{queryargs}"
-	match_stubs = do_web_request(url, matches_cache)
+	print(url)
+	match_stubs = do_web_request(url)
 
 	# player = do_web_request(f"http://api.opendota.com/api/players/{steamid}", f"player_{steamid}")
 	
@@ -122,34 +125,25 @@ def main(steamid, days, queryargs=None):
 
 	csv_data = ""
 
+	buffs = []
+
 	for match in matches:
+		print(match["match_id"])
 		players = match["players"]
-		radiant = list(filter(lambda p: p["player_slot"] < 128, players))
-		dire = list(filter(lambda p: p["player_slot"] >= 128, players))
-
-		is_radiant = any(p["account_id"] == steamid for p in radiant)
-
-		if is_radiant:
-			team1 = radiant
-			team2 = dire
-		else:
-			team1 = dire
-			team2 = radiant
-
-		diff = rankdiff(team1, team2)
-		if diff is not None:
-			print(f"match {match['match_id']: <10} diff: {' ' if diff > 0 else ''}{diff:.2f}")
-			csv_data += f"{match['match_id']},{diff:.2f}\n"
-			alldiffs.append(diff)
-		else:
-			print(f"match {match['match_id']: <10} skipped")
+		for player in players:
+			for buff in (player.get("permanent_buffs", []) or []):
+				buff = buff["permanent_buff"]
+				if buff not in buffs:
+					buffs.append(buff)
 
 
-	with open("out.csv", "w+") as f:
-		f.write(csv_data)
 
+	# with open("out.csv", "w+") as f:
+	# 	f.write(csv_data)
+	for buff in buffs:
+		print(buff)
 
-	print(f"average: {avg(alldiffs):.2f}")
+	# print(f"average: {avg(alldiffs):.2f}")
 
 
 # all
@@ -165,7 +159,7 @@ def main(steamid, days, queryargs=None):
 # main(95211699, 60, "included_account_id=170801607")
 
 # ranked w/ teammate
-main(95211699, 60, "included_account_id=170801607&lobby_type=7")
+main(95211699, 30)
 
 # singlematch(95211699, 4997722586)
 
